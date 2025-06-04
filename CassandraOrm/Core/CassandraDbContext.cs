@@ -87,9 +87,7 @@ public abstract class CassandraDbContext : IAsyncDisposable, IDisposable
             property.SetValue(this, dbSet);
             _entitySets[entityType] = dbSet!;
         }
-    }
-
-    private ISession GetSession()
+    }    private ISession GetSession()
     {
         if (_session == null)
         {
@@ -118,16 +116,51 @@ public abstract class CassandraDbContext : IAsyncDisposable, IDisposable
 
             _cluster = builder.Build();
 
+            // First connect without keyspace to handle keyspace creation
+            var tempSession = _cluster.Connect();
+            
+            // Create keyspace if needed and configured to do so
+            if (_configuration.AutoCreateKeyspace && !string.IsNullOrEmpty(_configuration.Keyspace))
+            {
+                try
+                {
+                    var replicationStrategy = _configuration.UseNetworkTopologyStrategy
+                        ? $"'class': 'NetworkTopologyStrategy', {string.Join(", ", _configuration.DataCenterReplicationFactors.Select(kv => $"'{kv.Key}': {kv.Value}"))}"
+                        : $"'class': 'SimpleStrategy', 'replication_factor': {_configuration.ReplicationFactor}";
+
+                    var cql = $@"
+                        CREATE KEYSPACE IF NOT EXISTS {_configuration.Keyspace}
+                        WITH REPLICATION = {{ {replicationStrategy} }}";
+
+                    tempSession.Execute(new SimpleStatement(cql));
+                    _logger?.LogInformation("Created/verified keyspace: {Keyspace}", _configuration.Keyspace);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Failed to create keyspace {Keyspace}, continuing anyway", _configuration.Keyspace);
+                }
+            }
+
+            // Now connect to the specific keyspace or use the temporary session
             if (!string.IsNullOrEmpty(_configuration.Keyspace))
             {
-                _session = _cluster.Connect(_configuration.Keyspace);
+                try
+                {
+                    tempSession.Dispose(); // Clean up temporary session
+                    _session = _cluster.Connect(_configuration.Keyspace);
+                    _logger?.LogInformation("Connected to Cassandra cluster with keyspace: {Keyspace}", _configuration.Keyspace);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Failed to connect to keyspace {Keyspace}, falling back to default connection", _configuration.Keyspace);
+                    _session = _cluster.Connect(); // Fallback to no keyspace
+                }
             }
             else
             {
-                _session = _cluster.Connect();
+                _session = tempSession; // Use the temporary session
+                _logger?.LogInformation("Connected to Cassandra cluster without specific keyspace");
             }
-
-            _logger?.LogInformation("Connected to Cassandra cluster with keyspace: {Keyspace}", _configuration.Keyspace);
         }
 
         return _session;
@@ -337,20 +370,13 @@ public abstract class CassandraDbContext : IAsyncDisposable, IDisposable
         var parameters = metadata.PartitionKeys.Concat(metadata.ClusteringKeys).Select(p => p.GetValue(entity)).ToArray();
 
         return new SimpleStatement(cql, parameters);
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Creates the database schema if it doesn't exist.
     /// </summary>
     public virtual void EnsureCreated()
     {
-        // Create keyspace if it doesn't exist and auto-creation is enabled
-        if (_configuration.AutoCreateKeyspace && !string.IsNullOrEmpty(_configuration.Keyspace))
-        {
-            CreateKeyspaceIfNotExists();
-        }
-
-        // Create tables for all registered entity types
+        // Keyspace creation is now handled in GetSession()
+        // Just create tables for all registered entity types
         foreach (var entityType in _entitySets.Keys)
         {
             CreateTableIfNotExists(entityType);
@@ -364,41 +390,12 @@ public abstract class CassandraDbContext : IAsyncDisposable, IDisposable
     /// <returns>A task that represents the asynchronous operation.</returns>
     public virtual async Task EnsureCreatedAsync(CancellationToken cancellationToken = default)
     {
-        // Create keyspace if it doesn't exist and auto-creation is enabled
-        if (_configuration.AutoCreateKeyspace && !string.IsNullOrEmpty(_configuration.Keyspace))
-        {
-            await CreateKeyspaceIfNotExistsAsync().ConfigureAwait(false);
-        }
-
-        // Create tables for all registered entity types
+        // Keyspace creation is now handled in GetSession()
+        // Just create tables for all registered entity types
         foreach (var entityType in _entitySets.Keys)
         {
             await CreateTableIfNotExistsAsync(entityType).ConfigureAwait(false);
         }
-    }
-
-    private void CreateKeyspaceIfNotExists()
-    {
-        var replicationStrategy = _configuration.UseNetworkTopologyStrategy
-            ? $"'class': 'NetworkTopologyStrategy', {string.Join(", ", _configuration.DataCenterReplicationFactors.Select(kv => $"'{kv.Key}': {kv.Value}"))}"
-            : $"'class': 'SimpleStrategy', 'replication_factor': {_configuration.ReplicationFactor}";        var cql = $@"
-            CREATE KEYSPACE IF NOT EXISTS {_configuration.Keyspace}
-            WITH REPLICATION = {{ {replicationStrategy} }}";
-
-        Session.Execute(new SimpleStatement(cql));
-        _logger?.LogInformation("Created keyspace: {Keyspace}", _configuration.Keyspace);
-    }
-
-    private async Task CreateKeyspaceIfNotExistsAsync()
-    {
-        var replicationStrategy = _configuration.UseNetworkTopologyStrategy
-            ? $"'class': 'NetworkTopologyStrategy', {string.Join(", ", _configuration.DataCenterReplicationFactors.Select(kv => $"'{kv.Key}': {kv.Value}"))}"
-            : $"'class': 'SimpleStrategy', 'replication_factor': {_configuration.ReplicationFactor}";        var cql = $@"
-            CREATE KEYSPACE IF NOT EXISTS {_configuration.Keyspace}
-            WITH REPLICATION = {{ {replicationStrategy} }}";
-
-        await Session.ExecuteAsync(new SimpleStatement(cql)).ConfigureAwait(false);
-        _logger?.LogInformation("Created keyspace: {Keyspace}", _configuration.Keyspace);
     }    private void CreateTableIfNotExists(Type entityType)
     {
         var metadata = EntityMetadataCache.GetMetadata(entityType);

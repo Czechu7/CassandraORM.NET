@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using CassandraOrm.Configuration;
 using CassandraOrm.Core;
 using CassandraOrm.Migrations;
+using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace CassandraOrm.Extensions;
 
@@ -279,9 +281,7 @@ public static class CassandraQueryableExtensions
         // This would be implemented in the query provider to add token() filtering
         // For now, return the queryable as-is
         return queryable;
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Executes the query asynchronously and returns the first element, or a default value if no element is found.
     /// </summary>
     /// <typeparam name="T">The entity type.</typeparam>
@@ -290,6 +290,11 @@ public static class CassandraQueryableExtensions
     /// <returns>A task that represents the asynchronous operation. The task result contains the first element or default value.</returns>
     public static async Task<T?> FirstOrDefaultAsync<T>(this IQueryable<T> queryable, CancellationToken cancellationToken = default) where T : class
     {
+        if (queryable is Query.CassandraQuery<T> cassandraQuery)
+        {
+            return await cassandraQuery.FirstOrDefaultAsync(cancellationToken);
+        }
+
         if (queryable is IAsyncEnumerable<T> asyncEnumerable)
         {
             await using var enumerator = asyncEnumerable.GetAsyncEnumerator(cancellationToken);
@@ -297,9 +302,7 @@ public static class CassandraQueryableExtensions
         }
 
         return queryable.FirstOrDefault();
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Executes the query asynchronously and returns the single element, or a default value if no element is found.
     /// </summary>
     /// <typeparam name="T">The entity type.</typeparam>
@@ -308,6 +311,11 @@ public static class CassandraQueryableExtensions
     /// <returns>A task that represents the asynchronous operation. The task result contains the single element or default value.</returns>
     public static async Task<T?> SingleOrDefaultAsync<T>(this IQueryable<T> queryable, CancellationToken cancellationToken = default) where T : class
     {
+        if (queryable is Query.CassandraQuery<T> cassandraQuery)
+        {
+            return await cassandraQuery.SingleOrDefaultAsync(cancellationToken);
+        }
+
         if (queryable is IAsyncEnumerable<T> asyncEnumerable)
         {
             var items = new List<T>();
@@ -321,9 +329,7 @@ public static class CassandraQueryableExtensions
         }
 
         return queryable.SingleOrDefault();
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Executes the query asynchronously and returns all results as a list.
     /// </summary>
     /// <typeparam name="T">The entity type.</typeparam>
@@ -332,6 +338,11 @@ public static class CassandraQueryableExtensions
     /// <returns>A task that represents the asynchronous operation. The task result contains all results as a list.</returns>
     public static async Task<List<T>> ToListAsync<T>(this IQueryable<T> queryable, CancellationToken cancellationToken = default) where T : class
     {
+        if (queryable is Query.CassandraQuery<T> cassandraQuery)
+        {
+            return await cassandraQuery.ToListAsync(cancellationToken);
+        }
+
         if (queryable is IAsyncEnumerable<T> asyncEnumerable)
         {
             var items = new List<T>();
@@ -343,9 +354,7 @@ public static class CassandraQueryableExtensions
         }
 
         return queryable.ToList();
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Executes the query asynchronously and returns the count of elements.
     /// </summary>
     /// <typeparam name="T">The entity type.</typeparam>
@@ -354,6 +363,11 @@ public static class CassandraQueryableExtensions
     /// <returns>A task that represents the asynchronous operation. The task result contains the count of elements.</returns>
     public static async Task<int> CountAsync<T>(this IQueryable<T> queryable, CancellationToken cancellationToken = default) where T : class
     {
+        if (queryable is Query.CassandraQuery<T> cassandraQuery)
+        {
+            return await cassandraQuery.CountAsync(cancellationToken);
+        }
+
         if (queryable is IAsyncEnumerable<T> asyncEnumerable)
         {
             var count = 0;
@@ -365,5 +379,138 @@ public static class CassandraQueryableExtensions
         }
 
         return queryable.Count();
+    }    /// <summary>
+    /// Executes the query asynchronously and returns whether any elements exist.
+    /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="queryable">The queryable to execute.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains whether any elements exist.</returns>
+    public static async Task<bool> AnyAsync<T>(this IQueryable<T> queryable, CancellationToken cancellationToken = default) where T : class
+    {
+        if (queryable is Query.CassandraQuery<T> cassandraQuery)
+        {
+            return await cassandraQuery.AnyAsync(cancellationToken);
+        }
+
+        if (queryable is IAsyncEnumerable<T> asyncEnumerable)
+        {
+            await using var enumerator = asyncEnumerable.GetAsyncEnumerator(cancellationToken);
+            return await enumerator.MoveNextAsync();
+        }
+
+        return queryable.Any();
+    }
+
+    /// <summary>
+    /// Executes the query asynchronously and returns whether any elements satisfy a condition.
+    /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="queryable">The queryable to execute.</param>
+    /// <param name="predicate">A function to test each element for a condition.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains whether any elements satisfy the condition.</returns>
+    public static async Task<bool> AnyAsync<T>(this IQueryable<T> queryable, Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default) where T : class
+    {
+        var filteredQuery = queryable.Where(predicate);
+        return await AnyAsync(filteredQuery, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the query asynchronously and returns the first element.
+    /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="queryable">The queryable to execute.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the first element.</returns>
+    public static async Task<T> FirstAsync<T>(this IQueryable<T> queryable, CancellationToken cancellationToken = default) where T : class
+    {
+        var result = await FirstOrDefaultAsync(queryable, cancellationToken);
+        if (result == null)
+            throw new InvalidOperationException("Sequence contains no elements");
+        return result;
+    }
+
+    /// <summary>
+    /// Executes the query asynchronously and returns the first element that satisfies a condition.
+    /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="queryable">The queryable to execute.</param>
+    /// <param name="predicate">A function to test each element for a condition.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the first element that satisfies the condition.</returns>
+    public static async Task<T> FirstAsync<T>(this IQueryable<T> queryable, Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default) where T : class
+    {
+        var filteredQuery = queryable.Where(predicate);
+        return await FirstAsync(filteredQuery, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the query asynchronously and returns the first element that satisfies a condition, or a default value if no such element is found.
+    /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="queryable">The queryable to execute.</param>
+    /// <param name="predicate">A function to test each element for a condition.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the first element or default value.</returns>
+    public static async Task<T?> FirstOrDefaultAsync<T>(this IQueryable<T> queryable, Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default) where T : class
+    {
+        var filteredQuery = queryable.Where(predicate);
+        return await FirstOrDefaultAsync(filteredQuery, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the query asynchronously and returns the single element.
+    /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="queryable">The queryable to execute.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the single element.</returns>
+    public static async Task<T> SingleAsync<T>(this IQueryable<T> queryable, CancellationToken cancellationToken = default) where T : class
+    {
+        var result = await SingleOrDefaultAsync(queryable, cancellationToken);
+        if (result == null)
+            throw new InvalidOperationException("Sequence contains no elements");
+        return result;
+    }
+
+    /// <summary>
+    /// Executes the query asynchronously and returns all results as an array.
+    /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="queryable">The queryable to execute.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains all results as an array.</returns>
+    public static async Task<T[]> ToArrayAsync<T>(this IQueryable<T> queryable, CancellationToken cancellationToken = default) where T : class
+    {
+        var list = await ToListAsync(queryable, cancellationToken);
+        return list.ToArray();
+    }
+
+    /// <summary>
+    /// Provides async enumerable support for IQueryable.
+    /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="queryable">The queryable source.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>An async enumerable.</returns>
+    public static async IAsyncEnumerable<T> AsAsyncEnumerable<T>(this IQueryable<T> queryable, [EnumeratorCancellation] CancellationToken cancellationToken = default) where T : class
+    {
+        if (queryable is IAsyncEnumerable<T> asyncEnumerable)
+        {
+            await foreach (var item in asyncEnumerable.WithCancellation(cancellationToken))
+            {
+                yield return item;
+            }
+        }
+        else
+        {
+            // Fallback to ToListAsync and iterate
+            var list = await ToListAsync(queryable, cancellationToken);
+            foreach (var item in list)
+            {
+                yield return item;
+            }
+        }
     }
 }

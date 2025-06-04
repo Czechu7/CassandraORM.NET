@@ -65,8 +65,8 @@ public class CassandraDbSet<T> : IQueryable<T>, IAsyncEnumerable<T> where T : cl
     /// <returns>An async enumerator that can be used to asynchronously iterate through the set.</returns>
     public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
-        var asyncEnumerable = await _queryProvider.ExecuteAsync<IAsyncEnumerable<T>>(_expression, cancellationToken);
-        await foreach (var item in asyncEnumerable.WithCancellation(cancellationToken))
+        var entities = await _queryProvider.ExecuteAsync<IEnumerable<T>>(_expression, cancellationToken);
+        foreach (var item in entities)
         {
             yield return item;
         }

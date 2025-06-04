@@ -14,7 +14,7 @@ namespace CassandraOrm.Examples;
 /// </summary>
 class Program
 {
-    static async Task Main(string[] args)
+    static void Main(string[] args)
     {
         Console.WriteLine("CassandraORM.NET - Basic Usage Example");
         Console.WriteLine("=====================================");
@@ -132,59 +132,3 @@ class Program
     }
     */
 }
-
-#region Entity Definitions
-
-[Table("users")]
-public class User
-{
-    [PartitionKey]
-    public Guid UserId { get; set; } = Guid.NewGuid();
-
-    [Column("full_name")]
-    public string Name { get; set; } = string.Empty;
-
-    [Index]
-    public string Email { get; set; } = string.Empty;
-
-    public bool IsActive { get; set; } = true;
-
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-}
-
-[Table("posts")]
-public class Post
-{
-    [PartitionKey]
-    public Guid PostId { get; set; } = Guid.NewGuid();
-
-    [ClusteringKey]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    public Guid AuthorId { get; set; }
-
-    public string Title { get; set; } = string.Empty;
-
-    public string Content { get; set; } = string.Empty;
-
-    public bool IsPublished { get; set; } = false;
-
-    public int LikesCount { get; set; } = 0;
-}
-
-#endregion
-
-#region Context Definition
-
-public class BlogContext : CassandraDbContext
-{
-    public CassandraDbSet<User> Users { get; set; } = null!;
-    public CassandraDbSet<Post> Posts { get; set; } = null!;
-
-    public BlogContext(CassandraConfiguration configuration, ILogger logger) 
-        : base(configuration)
-    {
-    }
-}
-
-#endregion

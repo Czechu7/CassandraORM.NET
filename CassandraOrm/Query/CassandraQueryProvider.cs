@@ -58,7 +58,7 @@ public class CassandraQueryProvider<T> : IQueryProvider where T : class
     /// <returns>A query that represents the expression.</returns>
     public IQueryable<TElement> CreateQuery<TElement>(Expression expression) where TElement : class
     {
-        return new CassandraQuery<TElement>(this, expression);
+        return new CassandraQuery<TElement>((CassandraQueryProvider<TElement>)(object)this, expression);
     }
 
     /// <summary>
@@ -198,77 +198,6 @@ public class CassandraQueryProvider<T> : IQueryProvider where T : class
         }
 
         return typeof(object);
-    }
-}
-
-/// <summary>
-/// Represents a Cassandra query for a specific type.
-/// </summary>
-/// <typeparam name="T">The type of elements in the query.</typeparam>
-public class CassandraQuery<T> : IQueryable<T>, IAsyncEnumerable<T> where T : class
-{
-    private readonly IQueryProvider _provider;
-    private readonly Expression _expression;
-
-    /// <summary>
-    /// Initializes a new instance of the CassandraQuery class.
-    /// </summary>
-    /// <param name="provider">The query provider.</param>
-    /// <param name="expression">The expression representing the query.</param>
-    public CassandraQuery(IQueryProvider provider, Expression expression)
-    {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
-        _expression = expression ?? throw new ArgumentNullException(nameof(expression));
-    }
-
-    /// <summary>
-    /// Gets the element type of the query.
-    /// </summary>
-    public Type ElementType => typeof(T);
-
-    /// <summary>
-    /// Gets the expression representing the query.
-    /// </summary>
-    public Expression Expression => _expression;
-
-    /// <summary>
-    /// Gets the query provider.
-    /// </summary>
-    public IQueryProvider Provider => _provider;
-
-    /// <summary>
-    /// Returns an enumerator that iterates through the query results.
-    /// </summary>
-    /// <returns>An enumerator that can be used to iterate through the query results.</returns>
-    public IEnumerator<T> GetEnumerator()
-    {
-        return _provider.Execute<IEnumerable<T>>(_expression).GetEnumerator();
-    }
-
-    /// <summary>
-    /// Returns an enumerator that iterates through the query results.
-    /// </summary>
-    /// <returns>An enumerator that can be used to iterate through the query results.</returns>
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
-
-    /// <summary>
-    /// Returns an async enumerator that asynchronously iterates through the query results.
-    /// </summary>
-    /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
-    /// <returns>An async enumerator that can be used to asynchronously iterate through the query results.</returns>
-    public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-    {
-        var queryProvider = (CassandraQueryProvider<T>)_provider;
-        var results = await queryProvider.ExecuteAsync<IEnumerable<T>>(_expression, cancellationToken).ConfigureAwait(false);
-        
-        foreach (var result in results)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            yield return result;
-        }
     }
 }
 
