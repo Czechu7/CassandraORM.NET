@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>CassandraORM.NET</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Bartlomiej Czech</Authors>
+    <Company>CassandraORM</Company>
+    <Product>CassandraORM.NET</Product>
+    <Title>CassandraORM.NET - Entity Framework for Cassandra</Title>
+    <Description>Object-Relational Mapping (ORM) library for Apache Cassandra in .NET. Features Entity Framework-like API, LINQ support, User-Defined Types, Collections, Materialized Views, Health Checks, Retry Policies, and Performance Monitoring.</Description>
+    <Summary>Entity Framework-like ORM for Apache Cassandra with advanced features</Summary>
+    <PackageTags>cassandra;orm;entity-framework;linq;database;nosql;distributed;bigdata;cql;udt;collections;materialized-views;health-checks;retry-policies;performance-monitoring</PackageTags>
+    <RepositoryUrl>https://github.com/Czechu7/CassandraORM.NET</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Czechu7/CassandraORM.NET</PackageProjectUrl>
+    <PackageReleaseNotes>
+      Initial release of CassandraORM.NET v1.0.0
+      
+      Features:
+      - Entity Framework-like API with DbContext and DbSet patterns
+      - Full CRUD operations with LINQ support
+      - User-Defined Types (UDTs) and Collections (List, Set, Map)
+      - Materialized Views with automated management
+      - Health Checks and Retry Policies for production use
+      - Performance Monitoring and Metrics
+      - Automatic Schema Generation and Migration Support
+      - Comprehensive Documentation and Examples
+    </PackageReleaseNotes>    <Copyright>Copyright © 2025 CassandraORM Contributors</Copyright>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CassandraCSharpDriver" Version="3.20.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="README.md" />
+    <None Include="../USAGE_GUIDE.md" Pack="true" PackagePath="docs/USAGE_GUIDE.md" />
+    <None Include="../Examples/RealWorldExample.cs" Pack="true" PackagePath="examples/RealWorldExample.cs" />
+  </ItemGroup>
+
+</Project>
