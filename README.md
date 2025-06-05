@@ -2,8 +2,8 @@
 
 A comprehensive Object-Relational Mapping (ORM) library for Apache Cassandra in .NET, inspired by Entity Framework's functionality and design patterns. Build production-ready applications with Cassandra using familiar .NET patterns and powerful features.
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/user/CassandraORM.NET)
-[![NuGet](https://img.shields.io/badge/nuget-v1.0.0-blue)](https://www.nuget.org/packages/CassandraORM.NET/)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/Czechu7/CassandraORM.NET)
+[![NuGet](https://img.shields.io/badge/nuget-v1.0.1-blue)](https://www.nuget.org/packages/CassandraORM.NET/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ## Installation
